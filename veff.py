@@ -122,7 +122,8 @@ null_effect = Effect(*([None] * len(Effect._fields)))
 
 def get_effects(genome, chrom, pos, ref, alt,
                 gff3_gene_types={'gene', 'pseudogene'},
-                gff3_transcript_types={'mRNA', 'pseudogenic_transcript'},
+                gff3_transcript_types={'mRNA', 'rRNA',
+                                       'pseudogenic_transcript'},
                 gff3_cds_types={'CDS', 'pseudogenic_exon'}):
     """TODO
 
@@ -385,6 +386,7 @@ def _get_within_cds_effect(genome, base_effect, cds, cdss):
     pos = base_effect.pos
     ref = base_effect.ref
     alt = base_effect.alt
+    strand = base_effect.cds_strand
 
     # obtain amino acid change
     ref_cds_start, ref_cds_stop, ref_start_phase, ref_codon, alt_codon, \
@@ -451,65 +453,76 @@ def _get_within_cds_effect(genome, base_effect, cds, cdss):
 
         # INDELs and MNPs
 
-        indel_size = len(ref) - len(alt)
+        if (len(alt) - len(ref)) % 3:
 
-        if indel_size % 3:
+            # N.B., this case covers both simple INDELs and complex
+            # polymorphisms
 
             # insertion or deletion causes a frame shift
             # e.g.: An indel size is not multple of 3
             effect = base_effect._replace(effect='FRAME_SHIFT',
                                           impact='HIGH')
 
-        elif indel_size > 0:
+        elif len(ref) == 1 and len(ref) < len(alt):
 
-            # insertions
+            # simple insertions
 
-            if ref_start_phase > 0:
+            # figure out if there has been a codon change or not
+            is_codon_changed = (strand == '+' and ref_aa[0] != alt_aa[0]) \
+                or (strand == '-' and ref_aa[-1] != alt_aa[-1])
+
+            if is_codon_changed:
+
+                # one codon is changed and one or many codons are inserted
+                # e.g.: An insert of size multiple of three, not at codon
+                # boundary
+                effect = base_effect._replace(
+                    effect='CODON_CHANGE_PLUS_CODON_INSERTION',
+                    impact='MODERATE'
+                )
+
+            else:
 
                 # one or many codons are inserted
                 # e.g.: An insert multiple of three in a codon boundary
                 effect = base_effect._replace(effect='CODON_INSERTION',
                                               impact='MODERATE')
 
-            else:
+        elif len(alt) == 1 and len(ref) > len(alt):
 
-                # one codon is changed and one or many codons are inserted
-                # e.g.: An insert of size multiple of three, not at codon
+            # simple deletions
+
+            # figure out if there has been a codon change or not
+            is_codon_changed = (strand == '+' and ref_aa[0] != alt_aa[0]) \
+                or (strand == '-' and ref_aa[-1] != alt_aa[-1])
+
+            if is_codon_changed:
+
+                # one codon is changed and one or many codons are deleted
+                # e.g.: A deletion of size multiple of three, not at codon
                 # boundary
                 effect = base_effect._replace(
-                    effect='CODON_CHANGE_PLUS CODON_INSERTION',
+                    effect='CODON_CHANGE_PLUS_CODON_DELETION',
                     impact='MODERATE'
                 )
 
-        elif indel_size < 0:
-
-            # deletions
-
-            if ref_start_phase > 0:
+            else:
 
                 # one or many codons are deleted
                 # e.g.: A deletions multiple of three in a codon boundary
                 effect = base_effect._replace(effect='CODON_DELETION',
                                               impact='MODERATE')
 
-            else:
-
-                # one codon is changed and one or many codons are deleted
-                # e.g.: A deletion of size multiple of three, not at codon
-                # boundary
-                effect = base_effect._replace(
-                    effect='CODON_CHANGE_PLUS CODON_DELETION',
-                    impact='MODERATE'
-                )
-
-        else:
+        elif len(ref) == len(alt):
 
             # MNPs
-            assert indel_size == 0
             effect = base_effect._replace(effect='CODON_CHANGE',
                                           impact='MODERATE')
 
-    # TODO check codon changes are non-synonymous?
+        else:
+
+            # TODO in-frame complex variation (MNP + INDEL)
+            effect = base_effect._replace(effect='TODO')
 
     return effect
 
