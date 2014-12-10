@@ -87,37 +87,39 @@ class Genome(object):
         return ref_start, ref_stop
 
 
-Effect = collections.namedtuple('Effect', ('effect',
-                                           'impact',
-                                           'chrom',
-                                           'pos',
-                                           'ref',
-                                           'alt',
-                                           'ref_start',
-                                           'ref_stop',
-                                           'gene_id',
-                                           'gene_start',
-                                           'gene_stop',
-                                           'gene_strand',
-                                           'transcript_id',
-                                           'transcript_start',
-                                           'transcript_stop',
-                                           'transcript_strand',
-                                           'cds_id',
-                                           'cds_start',
-                                           'cds_stop',
-                                           'cds_strand',
-                                           'ref_cds_start',
-                                           'ref_cds_stop',
-                                           'ref_start_phase',
-                                           'ref_codon',
-                                           'alt_codon',
-                                           'codon_change',
-                                           'aa_pos',
-                                           'ref_aa',
-                                           'alt_aa',
-                                           'aa_change'))
-null_effect = Effect(*([None] * len(Effect._fields)))
+VariantEffect = collections.namedtuple('VariantEffect',
+                                       ('effect',
+                                        'impact',
+                                        'chrom',
+                                        'pos',
+                                        'ref',
+                                        'alt',
+                                        'vlen',
+                                        'ref_start',
+                                        'ref_stop',
+                                        'gene_id',
+                                        'gene_start',
+                                        'gene_stop',
+                                        'gene_strand',
+                                        'transcript_id',
+                                        'transcript_start',
+                                        'transcript_stop',
+                                        'transcript_strand',
+                                        'cds_id',
+                                        'cds_start',
+                                        'cds_stop',
+                                        'cds_strand',
+                                        'ref_cds_start',
+                                        'ref_cds_stop',
+                                        'ref_start_phase',
+                                        'ref_codon',
+                                        'alt_codon',
+                                        'codon_change',
+                                        'aa_pos',
+                                        'ref_aa',
+                                        'alt_aa',
+                                        'aa_change'))
+null_effect = VariantEffect(*([None] * len(VariantEffect._fields)))
 
 
 def get_effects(genome, chrom, pos, ref, alt,
@@ -140,7 +142,7 @@ def get_effects(genome, chrom, pos, ref, alt,
     Returns
     -------
 
-    An `Effect` generator.
+    An `VariantEffect` generator.
 
     """
 
@@ -156,6 +158,7 @@ def get_effects(genome, chrom, pos, ref, alt,
                                        pos=pos,
                                        ref=ref,
                                        alt=alt,
+                                       vlen=len(alt) - len(ref),
                                        ref_start=ref_start,
                                        ref_stop=ref_stop)
 
