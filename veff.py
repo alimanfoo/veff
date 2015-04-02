@@ -3,8 +3,8 @@ import collections
 import operator
 
 
-import petl.fluent as etl
-import petlx.gff3
+import petl as etl
+import petlx.bio
 import pyfasta
 from Bio.Seq import Seq
 
@@ -43,6 +43,7 @@ class Genome(object):
             .rename({'ID': 'feature_id',
                      'Parent': 'parent_id',
                      'end': 'stop'})
+            .select(lambda row: (row.stop - row.start) > 0)
         )
 
         # limit data to a single chromosome
@@ -57,7 +58,7 @@ class Genome(object):
 
         # index features by genomic location
         self._idx_location = self._tbl_features.facetintervalrecordlookup(
-            'seqid', 'start', 'stop', proximity=1
+            'seqid', 'start', 'stop', include_stop=True
         )
 
     def get_feature(self, feature_id):
@@ -67,7 +68,7 @@ class Genome(object):
         return self._idx_parent_id[feature_id]
 
     def find(self, chrom, start, stop):
-        return self._idx_location[chrom].find(start, stop)
+        return self._idx_location[chrom].search(start, stop)
 
     def get_ref_allele_coords(self, chrom, pos, ref):
 
